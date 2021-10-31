@@ -1,0 +1,288 @@
+<html>
+    <head>
+        <title>Quest</title>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+        <meta charset="UTF-8">
+
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@700&display=swap" rel="stylesheet">
+
+        <style>
+            * {
+                font-family: 'Roboto', sans-serif;
+                touch-action: manipulation;
+            }
+
+            #instruction {
+                text-align: center;
+                padding: 20px;
+                font-size: 4rem;
+                margin-top: 10rem;
+            }
+
+            .code-digit {
+                background-color: black;
+                height: 200px;
+                width: 200px;
+                margin: 10px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                font-size: 150px;
+                color: white;
+            }
+
+            .button {
+                background-color: white;
+                border: 1px solid black;
+                height: 170px;
+                width: 170px;
+                margin: 10px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                font-size: 80px;
+                color: black;
+            }
+
+
+            #code {
+                display: flex;
+                flex-direction: row;
+                flex-wrap: nowrap;
+                justify-content: center;
+            }
+
+            #buttons {
+                display: flex;
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: center;
+                margin: 50px 150px;
+            }
+
+            .red {
+                color: red;
+            }
+
+            .green {
+                color: green;
+            }
+
+            .grey {
+                background-color: #e0dede;
+            }
+
+            .stage {
+                font-size: 7rem;
+                display: block;
+                margin: 1rem;
+            }
+
+            #code.correct .code-digit {
+                background-color: green;
+            }
+
+            #code.wrong .code-digit {
+                background-color: red;
+            }
+
+            .hidden {
+                display: none;
+            }
+
+            #item {
+                text-align: center;
+                font-size: 4rem;
+                display: none;
+            }
+         </style>
+    </head>
+    <body>
+        <div id="instruction">
+            <span class="stage"><span class="stage-value">0</span> / <span class="stage-number">2</span></span>
+            <br>
+            <span class="text">Введіть 4-цифровий код</span>
+        </div>
+        <div id="code" class="wrong">
+        </div>
+        <div id="buttons">
+
+        </div>
+
+        <div id="item">
+            Новий предмет: <br>
+            <span class="item"></span>
+        </div>
+
+        <div class="code-digit-template hidden"></div>
+        <button class="button-template hidden"></button>
+    </body>
+
+    <script>
+        $(document).ready(function() {
+            let code = [];
+            let code_filled = 0;
+            let stage = 0;
+            let is_end = false;
+            let is_blocked = false;
+
+            let correct_codes = [['7', '4', '8', '3'], ['8', '2', '5', '0'], ['2', '0', '0', '9'], ['2', '1', '3', '6'],
+                                 ['1', '3', '5', '6'], ['9', '3', '2', '5']];
+
+            let items = ['трикутник', 'пазли', 'судоку', 'колонка', 'батарейка'];
+
+            let incorrect_count = 0;
+
+            $('.stage-number').text(correct_codes.length);
+
+            emptyCode();
+            showButtons();
+
+            function emptyCode() {
+                code = ['_', '_', '_', '_'];
+                code_filled = 0;
+                showCode();
+            }
+
+            function showItem() {
+                if (stage < 1) {
+                    return false;
+                }
+
+                $('.item').text(items[stage - 1]);
+                $('#item').show();
+            }
+
+            function showCode() {
+                let digit = $('.code-digit-template');
+
+                $('#code').removeClass().empty();
+                for (let i = 1; i <= 4; i++) {
+                    let new_digit = $(digit).clone().attr('digit', i).removeClass().addClass('code-digit').text(code[i - 1]);
+                    $('#code').append(new_digit);
+                }
+            }
+
+            function showButtons() {
+                let button = $('.button-template');
+                let button_values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 'DEL', 0, 'OK'];
+
+                $('#buttons').empty();
+                for (let i = 1; i <= 12; i++) {
+                    let button_value = button_values[i - 1];
+                    let new_button = $(button).clone().attr('button', button_value).removeClass().addClass('button').text(button_value);
+
+                    if (button_value == 'DEL') {
+                        $(new_button).addClass('red');
+                    }
+
+                    if (button_value == 'OK') {
+                        $(new_button).addClass('green');
+                    }
+
+                    $('#buttons').append(new_button);
+                }
+            }
+
+            $(document).on('click', '.button', function(){
+                if (is_end) {
+                    return false;
+                }
+
+                if (is_blocked) {
+                    return false;
+                }
+
+                let value = $(this).attr('button');
+
+                if (parseInt(value) >= 0 && code_filled < 4) {
+                    code[code_filled++] = value;
+                    showCode();
+                }
+
+                if (value == 'DEL') {
+                    emptyCode();
+                    showCode();
+                }
+
+                if (value == 'OK') {
+                    let is_correct = checkCode();
+
+                    if (is_correct) {
+                        stage++;
+                        incorrect_count = 0;
+                        $('.stage-value').text(stage);
+                        $('#code').addClass('correct');
+                        showItem();
+                    } else {
+                        $('#code').addClass('wrong');
+                        incorrect_count++;
+                        startIncorrectTimer();
+                    }
+
+                    // console.log(incorrect_count);
+
+                    setTimeout(function () {
+                        if (incorrect_count >= 3) {
+                            startTimer();
+                        } else {
+                            emptyCode();
+                        }
+                    }, 200);
+
+                    if (stage == correct_codes.length) {
+                        $('.text').text('Вітаю!').addClass('green');
+                        $('#item').hide();
+                        is_end = true;
+                    }
+                }
+            });
+
+            function startIncorrectTimer() {
+                setTimeout(function() {
+                    incorrect_count = 0;
+                }, 5000);
+            }
+
+            function startTimer() {
+                let seconds = 60;
+                is_blocked = true;
+
+                $('.button').text('').attr('disabled', true).addClass('grey');
+
+                timer = setInterval(function() {
+                    let first = Math.floor(seconds / 10);
+                    let second = seconds % 10;
+                    code = ['0', '0', first, second];
+
+                    showCode();
+                    $('#code').addClass('wrong');
+
+                    if (seconds == 0) {
+                        clearInterval(timer);
+                        is_blocked = false;
+                        emptyCode();
+                        showButtons();
+                    }
+
+                    seconds--;
+                }, 1000);
+            }
+
+            function checkCode() {
+                let correct_code = correct_codes[stage];
+                // console.log(correct_code);
+                // console.log(code);
+                for (let i = 1; i <= 4; i++) {
+                    if (correct_code[i - 1] != code[i - 1]) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+        });
+    </script>
+</html>
